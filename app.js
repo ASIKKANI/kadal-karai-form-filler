@@ -1,6 +1,6 @@
 /**
  * Rotaract Club of VIT Chennai - Official Undertaking PDF Direct Engine
- * Calibrated with Sub-Pixel Mathematical Accuracy
+ * With Multi-Format Image Upload Support & Sub-Pixel Calibration
  */
 
 // Configure PDF.js worker
@@ -137,21 +137,61 @@ function clearSignature(type) {
   scheduleLivePreviewUpdate(20);
 }
 
-function handleSigUpload(event, type) {
+/**
+ * Robust Image Upload Processing (Converts JPG/PNG/WEBP/HEIC to clean PNG DataURL)
+ */
+function processUploadedImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 800;
+        let w = img.naturalWidth || img.width;
+        let h = img.naturalHeight || img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const pngDataUrl = canvas.toDataURL('image/png');
+        resolve(pngDataUrl);
+      };
+      img.onerror = () => {
+        resolve(e.target.result);
+      };
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleSigUpload(event, type) {
   const file = event.target.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    sigState[type].dataUrl = e.target.result;
+  try {
+    const pngDataUrl = await processUploadedImage(file);
+    sigState[type].dataUrl = pngDataUrl;
     const previewContainer = document.getElementById(`${type}-upload-preview`);
     if (previewContainer) {
-      previewContainer.innerHTML = `<img src="${e.target.result}" alt="Uploaded Signature" />`;
+      previewContainer.innerHTML = `<img src="${pngDataUrl}" alt="Uploaded Signature" />`;
       previewContainer.classList.remove('hidden');
     }
-    scheduleLivePreviewUpdate(20);
-  };
-  reader.readAsDataURL(file);
+    scheduleLivePreviewUpdate(10);
+  } catch (err) {
+    console.error('Error uploading signature image:', err);
+  }
 }
 
 /**
@@ -168,7 +208,7 @@ function generateTypedSignatureImage(text, fontStyle = 'cursive-1') {
   ctx.fillStyle = '#050c30';
   
   if (fontStyle === 'cursive-1') {
-    ctx.font = 'italic 44px "Dancing Script", cursive, "Playfair Display"';
+    ctx.font = 'italic 44px "Dancing Script", cursive, sans-serif';
   } else {
     ctx.font = '50px "Reenie Beanie", "Dancing Script", cursive';
   }
@@ -249,7 +289,6 @@ async function buildFilledPdfDocument() {
   const pdfDoc = await PDFDocument.load(rawBytes);
 
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
   const pages = pdfDoc.getPages();
   const page1 = pages[0];
@@ -275,7 +314,7 @@ async function buildFilledPdfDocument() {
   const parentDate = document.getElementById('parent-date')?.value.trim() || '';
 
   // =========================================================================
-  // PAGE 1: EXACT CALIBRATED COORDINATES (LIFTED CLEANLY ABOVE UNDERLINES)
+  // PAGE 1: EXACT CALIBRATED COORDINATES
   // =========================================================================
   
   // 1. Name of Club/Chapter:
@@ -330,7 +369,7 @@ async function buildFilledPdfDocument() {
   }
 
   // =========================================================================
-  // PAGE 2: EXACT CALIBRATED COORDINATES (LIFTED CLEANLY ABOVE UNDERLINES)
+  // PAGE 2: EXACT CALIBRATED COORDINATES
   // =========================================================================
 
   // 1. Student Signature
@@ -344,7 +383,12 @@ async function buildFilledPdfDocument() {
 
   if (studentSigData) {
     try {
-      const studentImg = await pdfDoc.embedPng(studentSigData);
+      let studentImg;
+      if (studentSigData.startsWith('data:image/jpeg') || studentSigData.startsWith('data:image/jpg')) {
+        studentImg = await pdfDoc.embedJpg(studentSigData);
+      } else {
+        studentImg = await pdfDoc.embedPng(studentSigData);
+      }
       page2.drawImage(studentImg, {
         x: 175,
         y: 676,
@@ -390,12 +434,12 @@ async function buildFilledPdfDocument() {
     });
   }
 
-  // 4. Parent's Name (rests directly on Parent's Name line at y: 406.0)
+  // 4. Parent's Name (rests cleanly on line at y: 406.0)
   if (parentName) {
     page2.drawText(parentName, { x: 156, y: 406.0, size: 10.5, font, color });
   }
 
-  // 5. Parent's Signature (rests directly on Parent's Signature line at y: 370)
+  // 5. Parent's Signature (rests cleanly on line at y: 370)
   let parentSigData = null;
   if (sigState.parent.mode === 'draw' || sigState.parent.mode === 'upload') {
     parentSigData = sigState.parent.dataUrl;
@@ -406,7 +450,12 @@ async function buildFilledPdfDocument() {
 
   if (parentSigData) {
     try {
-      const parentImg = await pdfDoc.embedPng(parentSigData);
+      let parentImg;
+      if (parentSigData.startsWith('data:image/jpeg') || parentSigData.startsWith('data:image/jpg')) {
+        parentImg = await pdfDoc.embedJpg(parentSigData);
+      } else {
+        parentImg = await pdfDoc.embedPng(parentSigData);
+      }
       page2.drawImage(parentImg, {
         x: 175,
         y: 370,
@@ -418,7 +467,7 @@ async function buildFilledPdfDocument() {
     }
   }
 
-  // 6. Parent Date (rests directly on Date line at y: 332.5)
+  // 6. Parent Date (rests cleanly on Date line at y: 332.5)
   if (parentDate) {
     page2.drawText(parentDate, { x: 102, y: 332.5, size: 10.5, font, color });
   }
@@ -434,7 +483,7 @@ async function renderPdfDocument() {
   isRendering = true;
 
   const statusEl = document.getElementById('preview-status');
-  if (statusEl) statusEl.innerHTML = `<i data-lucide="loader" class="spin"></i> Updating...`;
+  if (statusEl) statusEl.innerHTML = `<i data-lucide="loader" class="spin"></i> Syncing...`;
   if (window.lucide) lucide.createIcons();
 
   try {
@@ -455,7 +504,7 @@ async function renderPdfDocument() {
       await renderPageToCanvas(page2, 'pdf-preview-canvas-2');
     }
 
-    if (statusEl) statusEl.innerHTML = `<i data-lucide="check-circle-2"></i> Live Synced`;
+    if (statusEl) statusEl.innerHTML = `<i data-lucide="check-circle-2"></i> Synced`;
   } catch (err) {
     console.error('Render error:', err);
     if (statusEl) statusEl.innerHTML = `<i data-lucide="alert-circle"></i> Error`;
@@ -469,7 +518,7 @@ async function renderPageToCanvas(pdfPage, canvasId) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
-  const scale = 1.8; // High resolution crisp canvas
+  const scale = 1.8;
   const viewport = pdfPage.getViewport({ scale });
   canvas.width = viewport.width;
   canvas.height = viewport.height;
@@ -539,7 +588,7 @@ function toggleEventEdit() {
   const isHidden = inputsDiv.classList.contains('hidden');
   inputsDiv.classList.toggle('hidden', !isHidden);
   dispDiv.classList.toggle('hidden', isHidden);
-  btnText.textContent = isHidden ? 'Done Editing' : 'Edit Event';
+  btnText.textContent = isHidden ? 'Done' : 'Edit';
 }
 
 /**

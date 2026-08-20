@@ -3,22 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Undertaking & Consent Form Portal | Rotaract Club of VIT Chennai</title>
-  <meta name="description" content="Fill your details and instantly generate the official VIT Chennai Office of Students' Welfare Outreach Undertaking & Parent Consent PDF.">
-  <meta name="theme-color" content="#d91b5c">
+  <title>Undertaking & Consent Portal | Rotaract Club of VIT Chennai</title>
+  <meta name="description" content="Generate official VIT Chennai Office of Students' Welfare Outreach Undertaking & Parent Consent PDF directly.">
+  <meta name="theme-color" content="#090d16">
   
-  <!-- Google Fonts -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=Dancing+Script:wght@600&family=Reenie+Beanie&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Dancing+Script:wght@600;700&family=Reenie+Beanie&display=swap" rel="stylesheet">
   
   <!-- Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   
-  <!-- PDF-LIB (Direct Original PDF Editor) -->
+  <!-- PDF-LIB & PDF.JS -->
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  
-  <!-- PDF.JS (Vector Canvas Preview Engine) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   
   <!-- Signature Pad -->
@@ -35,23 +33,21 @@
   <header class="app-header">
     <div class="header-container">
       <div class="brand-group">
-        <div class="brand-logo-badge">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <div class="brand-badge">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
           </svg>
         </div>
-        <div>
-          <h1 class="app-title">Rotaract Club of VIT Chennai</h1>
-          <p class="app-subtitle">Official Outreach Undertaking & Consent Portal</p>
+        <div class="brand-text">
+          <span class="brand-title">Rotaract Club of VIT Chennai</span>
+          <span class="brand-desc">Outreach Undertaking & Consent Portal</span>
         </div>
       </div>
       
-      <div class="header-actions">
-        <button id="toggle-preview-btn-top" class="btn btn-outline mobile-only-btn" onclick="toggleMobilePreview()">
-          <i data-lucide="eye"></i> <span>Preview PDF</span>
-        </button>
+      <!-- Desktop-only header actions -->
+      <div class="header-desktop-actions">
         <button class="btn btn-primary" onclick="handleDownloadPDF()">
-          <i data-lucide="download"></i> <span>Download PDF</span>
+          <i data-lucide="download"></i> <span>Download Official PDF</span>
         </button>
       </div>
     </div>
@@ -63,7 +59,7 @@
     <!-- LEFT PANE: Form Inputs -->
     <section class="form-pane">
       
-      <!-- Event Information (Pre-filled Constant 4 Parameters) -->
+      <!-- Event Information Card -->
       <div class="card event-card">
         <div class="card-header">
           <div class="card-title-group">
@@ -73,8 +69,8 @@
               <p class="card-desc">The 4 official event parameters are fixed by default</p>
             </div>
           </div>
-          <button type="button" class="btn-text" id="toggle-event-edit" onclick="toggleEventEdit()">
-            <i data-lucide="edit-3"></i> <span id="event-edit-text">Edit Event</span>
+          <button type="button" class="btn-edit" id="toggle-event-edit" onclick="toggleEventEdit()">
+            <i data-lucide="edit-3"></i> <span id="event-edit-text">Edit</span>
           </button>
         </div>
 
@@ -124,7 +120,7 @@
           <div class="card-title-group">
             <div class="icon-circle icon-student"><i data-lucide="user"></i></div>
             <div>
-              <h2 class="card-title">Student Details</h2>
+              <h2 class="card-title">Student Information</h2>
               <p class="card-desc">Enter your accurate details</p>
             </div>
           </div>
@@ -215,7 +211,7 @@
         <div id="student-sig-upload-container" class="sig-pane hidden">
           <div class="upload-dropzone" onclick="document.getElementById('student-sig-file').click()">
             <i data-lucide="image-plus"></i>
-            <p>Tap to choose signature photo (PNG / JPG)</p>
+            <p><strong>Tap to choose signature photo</strong> (PNG, JPG, JPEG)</p>
             <input type="file" id="student-sig-file" accept="image/*" class="hidden" onchange="handleSigUpload(event, 'student')">
           </div>
           <div id="student-upload-preview" class="upload-preview hidden"></div>
@@ -293,7 +289,7 @@
         <div id="parent-sig-upload-container" class="sig-pane hidden">
           <div class="upload-dropzone" onclick="document.getElementById('parent-sig-file').click()">
             <i data-lucide="image-plus"></i>
-            <p>Tap to upload parent signature photo</p>
+            <p><strong>Tap to choose parent signature photo</strong> (PNG, JPG, JPEG)</p>
             <input type="file" id="parent-sig-file" accept="image/*" class="hidden" onchange="handleSigUpload(event, 'parent')">
           </div>
           <div id="parent-upload-preview" class="upload-preview hidden"></div>
@@ -312,10 +308,10 @@
         </button>
         <div class="secondary-actions">
           <button type="button" class="btn btn-outline" onclick="toggleMobilePreview()">
-            <i data-lucide="eye"></i> View Live Preview
+            <i data-lucide="eye"></i> View Live PDF Preview
           </button>
           <button type="button" class="btn btn-secondary" onclick="resetForm()">
-            <i data-lucide="trash-2"></i> Clear All
+            <i data-lucide="trash-2"></i> Clear Form
           </button>
         </div>
       </div>
@@ -326,10 +322,10 @@
     <section class="preview-pane" id="preview-pane">
       <div class="preview-toolbar">
         <div class="preview-title">
-          <i data-lucide="file-check"></i> Live Original PDF Rendering
+          <i data-lucide="file-check-2"></i> Live Official PDF Preview
         </div>
         <div class="preview-controls">
-          <span class="badge-status" id="preview-status"><i data-lucide="check-circle-2"></i> Live Synced</span>
+          <span class="badge-status" id="preview-status"><i data-lucide="check-circle-2"></i> Synced</span>
           <button class="btn-icon mobile-close-btn" onclick="toggleMobilePreview()" title="Back to Form">
             <i data-lucide="x"></i>
           </button>
