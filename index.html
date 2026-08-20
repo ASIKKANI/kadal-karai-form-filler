@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Undertaking & Consent Form Portal | Rotaract Club of VIT Chennai</title>
+  <meta name="description" content="Fill your details and instantly generate the official VIT Chennai Office of Students' Welfare Outreach Undertaking & Parent Consent PDF.">
+  <meta name="theme-color" content="#d91b5c">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=Dancing+Script:wght@600&family=Reenie+Beanie&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- PDF-LIB (Direct Original PDF Editor) -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  
+  <!-- PDF.JS (Vector Canvas Preview Engine) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  
+  <!-- Signature Pad -->
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  
+  <!-- Embedded Official Template -->
+  <script src="template_base64.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top App Navigation -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-group">
+        <div class="brand-logo-badge">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="app-title">Rotaract Club of VIT Chennai</h1>
+          <p class="app-subtitle">Official Outreach Undertaking & Consent Portal</p>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <button id="toggle-preview-btn-top" class="btn btn-outline mobile-only-btn" onclick="toggleMobilePreview()">
+          <i data-lucide="eye"></i> <span>Preview PDF</span>
+        </button>
+        <button class="btn btn-primary" onclick="handleDownloadPDF()">
+          <i data-lucide="download"></i> <span>Download PDF</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-layout">
+    
+    <!-- LEFT PANE: Form Inputs -->
+    <section class="form-pane">
+      
+      <!-- Event Information (Pre-filled Constant 4 Parameters) -->
+      <div class="card event-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="icon-circle icon-event"><i data-lucide="calendar-days"></i></div>
+            <div>
+              <h2 class="card-title">Activity Information</h2>
+              <p class="card-desc">The 4 official event parameters are fixed by default</p>
+            </div>
+          </div>
+          <button type="button" class="btn-text" id="toggle-event-edit" onclick="toggleEventEdit()">
+            <i data-lucide="edit-3"></i> <span id="event-edit-text">Edit Event</span>
+          </button>
+        </div>
+
+        <div class="event-details-grid" id="event-display-grid">
+          <div class="event-item">
+            <span class="label">Club / Chapter</span>
+            <span class="value" id="disp-club-name">Rotaract Club of VIT Chennai</span>
+          </div>
+          <div class="event-item">
+            <span class="label">Outreach Activity</span>
+            <span class="value" id="disp-activity-name">Kadal Karai Symphony - Episode 1, Beach Cleanup</span>
+          </div>
+          <div class="event-item span-2">
+            <span class="label">Date & Venue</span>
+            <span class="value" id="disp-date-venue">23rd August 2026, Kovalam Beach / Chennai</span>
+          </div>
+          <div class="event-item span-2">
+            <span class="label">Faculty Coordinator</span>
+            <span class="value" id="disp-faculty-coord">Dr. V. VIJAYALAKSHMI</span>
+          </div>
+        </div>
+
+        <!-- Editable Event Fields (Hidden by default) -->
+        <div class="event-edit-inputs hidden" id="event-edit-inputs">
+          <div class="input-group">
+            <label for="inp-club-name">Name of Club/Chapter</label>
+            <input type="text" id="inp-club-name" value="Rotaract Club of VIT Chennai" class="form-control">
+          </div>
+          <div class="input-group">
+            <label for="inp-activity-name">Name of Outreach Activity</label>
+            <input type="text" id="inp-activity-name" value="Kadal Karai Symphony - Episode 1, Beach Cleanup" class="form-control">
+          </div>
+          <div class="input-group">
+            <label for="inp-date-venue">Date & Venue</label>
+            <input type="text" id="inp-date-venue" value="23rd August 2026, Kovalam Beach / Chennai" class="form-control">
+          </div>
+          <div class="input-group">
+            <label for="inp-faculty-coord">Faculty Coordinator</label>
+            <input type="text" id="inp-faculty-coord" value="Dr. V. VIJAYALAKSHMI" class="form-control">
+          </div>
+        </div>
+      </div>
+
+      <!-- Student Details Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="icon-circle icon-student"><i data-lucide="user"></i></div>
+            <div>
+              <h2 class="card-title">Student Details</h2>
+              <p class="card-desc">Enter your accurate details</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="input-group span-2">
+            <label for="student-name">Student Full Name <span class="required">*</span></label>
+            <div class="input-with-icon">
+              <i data-lucide="user-check"></i>
+              <input type="text" id="student-name" class="form-control" placeholder="e.g. Full Name" required autocomplete="name">
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="reg-no">Registration Number <span class="required">*</span></label>
+            <div class="input-with-icon">
+              <i data-lucide="hash"></i>
+              <input type="text" id="reg-no" class="form-control" placeholder="e.g. 23BCE0001" required style="text-transform: uppercase;">
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="programme-branch">Programme / Branch <span class="required">*</span></label>
+            <div class="input-with-icon">
+              <i data-lucide="graduation-cap"></i>
+              <input type="text" id="programme-branch" class="form-control" placeholder="e.g. B.Tech CSE" required>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="year-sem">Year / Semester <span class="required">*</span></label>
+            <div class="input-with-icon">
+              <i data-lucide="layers"></i>
+              <input type="text" id="year-sem" class="form-control" placeholder="e.g. 2nd Year / 4th Sem" required>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="mobile-no">Mobile Number <span class="required">*</span></label>
+            <div class="input-with-icon">
+              <i data-lucide="phone"></i>
+              <input type="tel" id="mobile-no" class="form-control" placeholder="e.g. 9876543210" required>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Student Signature Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="icon-circle icon-sig"><i data-lucide="pen-tool"></i></div>
+            <div>
+              <h2 class="card-title">Student Signature</h2>
+              <p class="card-desc">Sign on screen, type cursive, or upload photo</p>
+            </div>
+          </div>
+          <div class="sig-mode-tabs">
+            <button type="button" class="tab-btn active" id="tab-btn-student-draw" onclick="switchSigMode('student', 'draw')">Draw</button>
+            <button type="button" class="tab-btn" id="tab-btn-student-type" onclick="switchSigMode('student', 'type')">Type</button>
+            <button type="button" class="tab-btn" id="tab-btn-student-upload" onclick="switchSigMode('student', 'upload')">Upload</button>
+          </div>
+        </div>
+
+        <!-- Draw Mode -->
+        <div id="student-sig-draw-container" class="sig-pane active">
+          <div class="canvas-wrapper">
+            <canvas id="student-signature-canvas" width="460" height="130"></canvas>
+            <div class="canvas-actions">
+              <button type="button" class="btn-canvas" onclick="clearSignature('student')">
+                <i data-lucide="rotate-ccw"></i> Clear
+              </button>
+            </div>
+          </div>
+          <span class="canvas-hint"><i data-lucide="fingerprint"></i> Draw signature using finger, stylus, or mouse</span>
+        </div>
+
+        <!-- Type Mode -->
+        <div id="student-sig-type-container" class="sig-pane hidden">
+          <div class="input-group">
+            <input type="text" id="student-sig-text" class="form-control" placeholder="Type your name to generate signature">
+          </div>
+          <div class="typed-sig-preview cursive-font-1" id="student-typed-preview">Your Signature</div>
+        </div>
+
+        <!-- Upload Mode -->
+        <div id="student-sig-upload-container" class="sig-pane hidden">
+          <div class="upload-dropzone" onclick="document.getElementById('student-sig-file').click()">
+            <i data-lucide="image-plus"></i>
+            <p>Tap to choose signature photo (PNG / JPG)</p>
+            <input type="file" id="student-sig-file" accept="image/*" class="hidden" onchange="handleSigUpload(event, 'student')">
+          </div>
+          <div id="student-upload-preview" class="upload-preview hidden"></div>
+        </div>
+
+        <div class="input-group mt-3">
+          <label for="student-date">Date Signed</label>
+          <input type="text" id="student-date" class="form-control" placeholder="e.g. 23/08/2026">
+        </div>
+      </div>
+
+      <!-- Parent Consent Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <div class="icon-circle icon-parent"><i data-lucide="shield-check"></i></div>
+            <div>
+              <h2 class="card-title">Parent's / Guardian's Consent</h2>
+              <p class="card-desc">Parent authorization for outreach participation</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="input-group span-2">
+            <label for="parent-name">Parent / Guardian Name <span class="required">*</span></label>
+            <div class="input-with-icon">
+              <i data-lucide="user"></i>
+              <input type="text" id="parent-name" class="form-control" placeholder="e.g. Parent Name" required>
+            </div>
+          </div>
+
+          <div class="input-group span-2">
+            <div class="consent-agreement-box">
+              <label class="custom-checkbox">
+                <input type="checkbox" id="parent-consent-checkbox" checked>
+                <span class="checkmark"></span>
+                <span class="checkbox-text"><strong>Consent Granted (YES)</strong> — I voluntarily permit my child to participate.</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="sig-section-header">
+          <span class="sig-section-label">Parent's Signature:</span>
+          <div class="sig-mode-tabs">
+            <button type="button" class="tab-btn active" id="tab-btn-parent-draw" onclick="switchSigMode('parent', 'draw')">Draw</button>
+            <button type="button" class="tab-btn" id="tab-btn-parent-type" onclick="switchSigMode('parent', 'type')">Type</button>
+            <button type="button" class="tab-btn" id="tab-btn-parent-upload" onclick="switchSigMode('parent', 'upload')">Upload</button>
+          </div>
+        </div>
+
+        <!-- Parent Draw Mode -->
+        <div id="parent-sig-draw-container" class="sig-pane active">
+          <div class="canvas-wrapper">
+            <canvas id="parent-signature-canvas" width="460" height="130"></canvas>
+            <div class="canvas-actions">
+              <button type="button" class="btn-canvas" onclick="clearSignature('parent')">
+                <i data-lucide="rotate-ccw"></i> Clear
+              </button>
+            </div>
+          </div>
+          <span class="canvas-hint"><i data-lucide="fingerprint"></i> Parent can sign using phone screen or stylus</span>
+        </div>
+
+        <!-- Parent Type Mode -->
+        <div id="parent-sig-type-container" class="sig-pane hidden">
+          <div class="input-group">
+            <input type="text" id="parent-sig-text" class="form-control" placeholder="Type parent's name">
+          </div>
+          <div class="typed-sig-preview cursive-font-2" id="parent-typed-preview">Parent Signature</div>
+        </div>
+
+        <!-- Parent Upload Mode -->
+        <div id="parent-sig-upload-container" class="sig-pane hidden">
+          <div class="upload-dropzone" onclick="document.getElementById('parent-sig-file').click()">
+            <i data-lucide="image-plus"></i>
+            <p>Tap to upload parent signature photo</p>
+            <input type="file" id="parent-sig-file" accept="image/*" class="hidden" onchange="handleSigUpload(event, 'parent')">
+          </div>
+          <div id="parent-upload-preview" class="upload-preview hidden"></div>
+        </div>
+
+        <div class="input-group mt-3">
+          <label for="parent-date">Consent Date</label>
+          <input type="text" id="parent-date" class="form-control" placeholder="e.g. 23/08/2026">
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="action-footer-card">
+        <button type="button" class="btn btn-primary btn-large" id="main-download-btn" onclick="handleDownloadPDF()">
+          <i data-lucide="download"></i> Download Filled Official PDF
+        </button>
+        <div class="secondary-actions">
+          <button type="button" class="btn btn-outline" onclick="toggleMobilePreview()">
+            <i data-lucide="eye"></i> View Live Preview
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="resetForm()">
+            <i data-lucide="trash-2"></i> Clear All
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT PANE: Live High-Resolution PDF Canvas Preview -->
+    <section class="preview-pane" id="preview-pane">
+      <div class="preview-toolbar">
+        <div class="preview-title">
+          <i data-lucide="file-check"></i> Live Original PDF Rendering
+        </div>
+        <div class="preview-controls">
+          <span class="badge-status" id="preview-status"><i data-lucide="check-circle-2"></i> Live Synced</span>
+          <button class="btn-icon mobile-close-btn" onclick="toggleMobilePreview()" title="Back to Form">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live PDF Canvas Scroller -->
+      <div class="document-scroller" id="document-scroller">
+        <div class="pdf-canvas-container">
+          <div class="canvas-page-card">
+            <div class="page-badge">Page 1 of 2</div>
+            <canvas id="pdf-preview-canvas-1"></canvas>
+          </div>
+          <div class="canvas-page-card">
+            <div class="page-badge">Page 2 of 2</div>
+            <canvas id="pdf-preview-canvas-2"></canvas>
+          </div>
+          <div class="preview-bottom-spacer"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Mobile Floating Sticky Bottom Bar -->
+  <div class="mobile-sticky-bar">
+    <button class="btn btn-outline flex-1" onclick="toggleMobilePreview()">
+      <i data-lucide="eye"></i> <span id="mobile-btn-label">Preview PDF</span>
+    </button>
+    <button class="btn btn-primary flex-1" onclick="handleDownloadPDF()">
+      <i data-lucide="download"></i> <span>Download PDF</span>
+    </button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

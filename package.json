@@ -1,0 +1,22 @@
+{
+  "name": "rotaract-undertaking-generator",
+  "version": "1.0.0",
+  "description": "Instant Undertaking & Parent Consent PDF Form Generator for Rotaract Club of VIT Chennai",
+  "scripts": {
+    "start": "npx serve -l 3000",
+    "dev": "npx serve -l 3000"
+  },
+  "keywords": [
+    "vit",
+    "rotaract",
+    "undertaking",
+    "pdf-generator",
+    "consent-form"
+  ],
+  "author": "Rotaract Club of VIT Chennai",
+  "license": "MIT",
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^2.4.5"
+  }
+}
