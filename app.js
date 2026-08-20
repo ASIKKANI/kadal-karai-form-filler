@@ -1,6 +1,6 @@
 /**
- * Rotaract Club of VIT Chennai - Official Undertaking PDF Direct Engine
- * With Multi-Format Image Upload Support & Sub-Pixel Calibration
+ * Rotaract Club of VIT Chennai - High-Performance PDF Direct Engine
+ * Features: Auto-Crop Signature Trimming, Aspect-Ratio Clamping, Lazy Rendering
  */
 
 // Configure PDF.js worker
@@ -10,20 +10,21 @@ if (window.pdfjsLib) {
 
 let studentPad, parentPad;
 const sigState = {
-  student: { mode: 'draw', dataUrl: null },
-  parent: { mode: 'draw', dataUrl: null }
+  student: { mode: 'draw', dataUrl: null, width: 0, height: 0 },
+  parent: { mode: 'draw', dataUrl: null, width: 0, height: 0 }
 };
 
 let previewDebounceTimer = null;
 let currentPdfBytes = null;
 let isRendering = false;
+let previewEverOpened = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) {
     lucide.createIcons();
   }
 
-  // Set default dates to event date / today if empty
+  // Set default dates if empty
   const todayFormatted = getFormattedDate();
   const sDate = document.getElementById('student-date');
   const pDate = document.getElementById('parent-date');
@@ -33,7 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initSignaturePads();
   attachInputListeners();
   loadSavedDraft();
-  scheduleLivePreviewUpdate(0);
+
+  // On desktop (wide screen), render preview. On mobile, defer until Preview button is clicked
+  if (window.innerWidth > 1080) {
+    scheduleLivePreviewUpdate(50);
+  }
 });
 
 function getFormattedDate() {
@@ -45,7 +50,77 @@ function getFormattedDate() {
 }
 
 /**
- * Initialize Signature Canvas Pads
+ * Auto-crop / Trim Empty Whitespace around Signature
+ */
+function trimCanvas(canvas) {
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  if (!width || !height) return null;
+
+  try {
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+
+    let minX = width, minY = height, maxX = 0, maxY = 0;
+    let hasInk = false;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+        const a = data[idx + 3];
+
+        // Check for non-white, non-transparent pixels
+        if (a > 30 && (r < 240 || g < 240 || b < 240)) {
+          hasInk = true;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    if (!hasInk || maxX < minX || maxY < minY) {
+      return null;
+    }
+
+    // Add small 4px margin
+    const pad = 4;
+    minX = Math.max(0, minX - pad);
+    minY = Math.max(0, minY - pad);
+    maxX = Math.min(width, maxX + pad);
+    maxY = Math.min(height, maxY + pad);
+
+    const trimW = maxX - minX;
+    const trimH = maxY - minY;
+
+    const trimmedCanvas = document.createElement('canvas');
+    trimmedCanvas.width = trimW;
+    trimmedCanvas.height = trimH;
+    const tCtx = trimmedCanvas.getContext('2d');
+    tCtx.drawImage(canvas, minX, minY, trimW, trimH, 0, 0, trimW, trimH);
+
+    return {
+      dataUrl: trimmedCanvas.toDataURL('image/png'),
+      width: trimW,
+      height: trimH
+    };
+  } catch (e) {
+    // Fallback if getImageData is blocked
+    return {
+      dataUrl: canvas.toDataURL('image/png'),
+      width: canvas.width,
+      height: canvas.height
+    };
+  }
+}
+
+/**
+ * Initialize Signature Drawing Canvas Pads
  */
 function initSignaturePads() {
   const studentCanvas = document.getElementById('student-signature-canvas');
@@ -61,8 +136,13 @@ function initSignaturePads() {
 
     studentPad.addEventListener('endStroke', () => {
       if (!studentPad.isEmpty()) {
-        sigState.student.dataUrl = studentPad.toDataURL('image/png');
-        scheduleLivePreviewUpdate(20);
+        const trimmed = trimCanvas(studentCanvas);
+        if (trimmed) {
+          sigState.student.dataUrl = trimmed.dataUrl;
+          sigState.student.width = trimmed.width;
+          sigState.student.height = trimmed.height;
+        }
+        scheduleLivePreviewUpdate(30);
       }
     });
   }
@@ -77,8 +157,13 @@ function initSignaturePads() {
 
     parentPad.addEventListener('endStroke', () => {
       if (!parentPad.isEmpty()) {
-        sigState.parent.dataUrl = parentPad.toDataURL('image/png');
-        scheduleLivePreviewUpdate(20);
+        const trimmed = trimCanvas(parentCanvas);
+        if (trimmed) {
+          sigState.parent.dataUrl = trimmed.dataUrl;
+          sigState.parent.width = trimmed.width;
+          sigState.parent.height = trimmed.height;
+        }
+        scheduleLivePreviewUpdate(30);
       }
     });
   }
@@ -124,7 +209,7 @@ function switchSigMode(type, mode) {
     }
   });
 
-  scheduleLivePreviewUpdate(20);
+  scheduleLivePreviewUpdate(30);
 }
 
 function clearSignature(type) {
@@ -134,11 +219,13 @@ function clearSignature(type) {
     parentPad.clear();
   }
   sigState[type].dataUrl = null;
-  scheduleLivePreviewUpdate(20);
+  sigState[type].width = 0;
+  sigState[type].height = 0;
+  scheduleLivePreviewUpdate(30);
 }
 
 /**
- * Robust Image Upload Processing (Converts JPG/PNG/WEBP/HEIC to clean PNG DataURL)
+ * Image Upload Processing (Converts JPG/PNG/WEBP to clean PNG DataURL)
  */
 function processUploadedImage(file) {
   return new Promise((resolve, reject) => {
@@ -147,7 +234,7 @@ function processUploadedImage(file) {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const maxDim = 800;
+        const maxDim = 600;
         let w = img.naturalWidth || img.width;
         let h = img.naturalHeight || img.height;
         if (w > maxDim || h > maxDim) {
@@ -164,10 +251,10 @@ function processUploadedImage(file) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
         const pngDataUrl = canvas.toDataURL('image/png');
-        resolve(pngDataUrl);
+        resolve({ dataUrl: pngDataUrl, width: w, height: h });
       };
       img.onerror = () => {
-        resolve(e.target.result);
+        resolve({ dataUrl: e.target.result, width: 200, height: 60 });
       };
       img.src = e.target.result;
     };
@@ -181,11 +268,14 @@ async function handleSigUpload(event, type) {
   if (!file) return;
 
   try {
-    const pngDataUrl = await processUploadedImage(file);
-    sigState[type].dataUrl = pngDataUrl;
+    const result = await processUploadedImage(file);
+    sigState[type].dataUrl = result.dataUrl;
+    sigState[type].width = result.width;
+    sigState[type].height = result.height;
+
     const previewContainer = document.getElementById(`${type}-upload-preview`);
     if (previewContainer) {
-      previewContainer.innerHTML = `<img src="${pngDataUrl}" alt="Uploaded Signature" />`;
+      previewContainer.innerHTML = `<img src="${result.dataUrl}" alt="Uploaded Signature" />`;
       previewContainer.classList.remove('hidden');
     }
     scheduleLivePreviewUpdate(10);
@@ -215,11 +305,17 @@ function generateTypedSignatureImage(text, fontStyle = 'cursive-1') {
   
   ctx.textBaseline = 'middle';
   ctx.fillText(text, 15, 45);
-  return canvas.toDataURL('image/png');
+
+  const trimmed = trimCanvas(canvas);
+  return trimmed || {
+    dataUrl: canvas.toDataURL('image/png'),
+    width: 360,
+    height: 90
+  };
 }
 
 /**
- * Attach listeners to update live preview instantly
+ * Attach listeners to update live preview
  */
 function attachInputListeners() {
   const inputIds = [
@@ -239,7 +335,7 @@ function attachInputListeners() {
       if (id === 'inp-faculty-coord') document.getElementById('disp-faculty-coord').textContent = el.value || 'Dr. V. VIJAYALAKSHMI';
 
       saveDraft();
-      scheduleLivePreviewUpdate(50);
+      scheduleLivePreviewUpdate(60);
     });
   });
 
@@ -249,13 +345,13 @@ function attachInputListeners() {
   if (sText) {
     sText.addEventListener('input', () => {
       document.getElementById('student-typed-preview').textContent = sText.value || 'Your Signature';
-      scheduleLivePreviewUpdate(50);
+      scheduleLivePreviewUpdate(60);
     });
   }
   if (pText) {
     pText.addEventListener('input', () => {
       document.getElementById('parent-typed-preview').textContent = pText.value || 'Parent Signature';
-      scheduleLivePreviewUpdate(50);
+      scheduleLivePreviewUpdate(60);
     });
   }
 
@@ -269,6 +365,11 @@ function attachInputListeners() {
 }
 
 function scheduleLivePreviewUpdate(delayMs = 50) {
+  // Only schedule if preview is visible or desktop
+  const previewPane = document.getElementById('preview-pane');
+  const isVisible = window.innerWidth > 1080 || (previewPane && previewPane.classList.contains('mobile-active'));
+  if (!isVisible && !previewEverOpened) return;
+
   clearTimeout(previewDebounceTimer);
   previewDebounceTimer = setTimeout(() => {
     renderPdfDocument();
@@ -276,7 +377,7 @@ function scheduleLivePreviewUpdate(delayMs = 50) {
 }
 
 /**
- * Direct PDF Modification Engine via PDF-Lib with Exact Calibrated Coordinates
+ * Direct PDF Modification Engine via PDF-Lib with Proportional Signature Clamping
  */
 async function buildFilledPdfDocument() {
   if (!window.TEMPLATE_PDF_BASE64 || !window.PDFLib) {
@@ -317,68 +418,40 @@ async function buildFilledPdfDocument() {
   // PAGE 1: EXACT CALIBRATED COORDINATES
   // =========================================================================
   
-  // 1. Name of Club/Chapter:
-  if (clubName) {
-    page1.drawText(clubName, { x: 200, y: 600.5, size: 10.5, font, color });
-  }
+  if (clubName) page1.drawText(clubName, { x: 200, y: 600.5, size: 10.5, font, color });
+  if (activityName) page1.drawText(activityName, { x: 220, y: 586.5, size: 10.5, font, color });
+  if (dateVenue) page1.drawText(dateVenue, { x: 155, y: 572.5, size: 9.5, font, color });
+  if (facultyCoord) page1.drawText(facultyCoord, { x: 188, y: 559.0, size: 10.5, font, color });
 
-  // 2. Name of Outreach Activity:
-  if (activityName) {
-    page1.drawText(activityName, { x: 220, y: 586.5, size: 10.5, font, color });
-  }
-
-  // 3. Date & Venue:
-  if (dateVenue) {
-    page1.drawText(dateVenue, { x: 155, y: 572.5, size: 9.5, font, color });
-  }
-
-  // 4. Faculty Coordinator:
-  if (facultyCoord) {
-    page1.drawText(facultyCoord, { x: 188, y: 559.0, size: 10.5, font, color });
-  }
-
-  // 5. STUDENT DETAILS
-  // Name:
-  if (studentName) {
-    page1.drawText(studentName, { x: 112, y: 487.0, size: 10.5, font, color });
-  }
-
-  // Reg. No.:
-  if (regNo) {
-    page1.drawText(regNo, { x: 376, y: 487.0, size: 10.5, font, color });
-  }
-
-  // Programme/Branch:
-  if (branch) {
-    page1.drawText(branch, { x: 185, y: 473.0, size: 10.5, font, color });
-  }
-
-  // Year/Semester:
-  if (yearSem) {
-    page1.drawText(yearSem, { x: 408, y: 473.0, size: 10.5, font, color });
-  }
-
-  // Mobile No.:
-  if (mobileNo) {
-    page1.drawText(mobileNo, { x: 138, y: 459.5, size: 10.5, font, color });
-  }
-
-  // 6. UNDERTAKING: "I, _________________________, hereby undertake"
-  if (studentName) {
-    page1.drawText(studentName, { x: 88, y: 387.5, size: 10.5, font, color });
-  }
+  if (studentName) page1.drawText(studentName, { x: 112, y: 487.0, size: 10.5, font, color });
+  if (regNo) page1.drawText(regNo, { x: 376, y: 487.0, size: 10.5, font, color });
+  if (branch) page1.drawText(branch, { x: 185, y: 473.0, size: 10.5, font, color });
+  if (yearSem) page1.drawText(yearSem, { x: 408, y: 473.0, size: 10.5, font, color });
+  if (mobileNo) page1.drawText(mobileNo, { x: 138, y: 459.5, size: 10.5, font, color });
+  if (studentName) page1.drawText(studentName, { x: 88, y: 387.5, size: 10.5, font, color });
 
   // =========================================================================
-  // PAGE 2: EXACT CALIBRATED COORDINATES
+  // PAGE 2: EXACT CALIBRATED COORDINATES WITH SAFE BOUNDS
   // =========================================================================
 
-  // 1. Student Signature
+  // 1. Student Signature (Strict max-height: 25pt, max-width: 120pt to never overlap text above)
   let studentSigData = null;
+  let studentSigW = 120, studentSigH = 30;
+
   if (sigState.student.mode === 'draw' || sigState.student.mode === 'upload') {
     studentSigData = sigState.student.dataUrl;
+    studentSigW = sigState.student.width || 120;
+    studentSigH = sigState.student.height || 30;
   } else if (sigState.student.mode === 'type') {
     const txt = document.getElementById('student-sig-text')?.value.trim() || studentName;
-    if (txt) studentSigData = generateTypedSignatureImage(txt, 'cursive-1');
+    if (txt) {
+      const generated = generateTypedSignatureImage(txt, 'cursive-1');
+      if (generated) {
+        studentSigData = generated.dataUrl;
+        studentSigW = generated.width;
+        studentSigH = generated.height;
+      }
+    }
   }
 
   if (studentSigData) {
@@ -389,23 +462,36 @@ async function buildFilledPdfDocument() {
       } else {
         studentImg = await pdfDoc.embedPng(studentSigData);
       }
+
+      // Compute safe aspect-ratio bounded dimensions
+      const maxW = 115;
+      const maxH = 24; // Strict cap so top never exceeds y=698 (text is at 708.8)
+      const ratio = studentSigW / (studentSigH || 1);
+      
+      let drawW = maxW;
+      let drawH = drawW / ratio;
+      if (drawH > maxH) {
+        drawH = maxH;
+        drawW = drawH * ratio;
+      }
+
       page2.drawImage(studentImg, {
-        x: 175,
-        y: 676,
-        width: 125,
-        height: 35
+        x: 180,
+        y: 673,
+        width: Math.min(drawW, maxW),
+        height: Math.min(drawH, maxH)
       });
     } catch (e) {
       console.warn('Could not embed student signature:', e);
     }
   }
 
-  // 2. Student Date (under student signature)
+  // 2. Student Date
   if (studentDate) {
     page2.drawText(studentDate, { x: 106, y: 661.5, size: 10.5, font, color });
   }
 
-  // 3. Parent Consent Checkbox (YES box vs NO box)
+  // 3. Parent Consent Checkbox
   if (parentConsent) {
     page2.drawLine({
       start: { x: 242, y: 477 },
@@ -434,18 +520,29 @@ async function buildFilledPdfDocument() {
     });
   }
 
-  // 4. Parent's Name (rests cleanly on line at y: 406.0)
+  // 4. Parent's Name
   if (parentName) {
     page2.drawText(parentName, { x: 156, y: 406.0, size: 10.5, font, color });
   }
 
-  // 5. Parent's Signature (rests cleanly on line at y: 370)
+  // 5. Parent's Signature (Strict max-height: 25pt, max-width: 120pt to never overlap Parent's Name line at 402.5)
   let parentSigData = null;
+  let parentSigW = 120, parentSigH = 30;
+
   if (sigState.parent.mode === 'draw' || sigState.parent.mode === 'upload') {
     parentSigData = sigState.parent.dataUrl;
+    parentSigW = sigState.parent.width || 120;
+    parentSigH = sigState.parent.height || 30;
   } else if (sigState.parent.mode === 'type') {
     const pTxt = document.getElementById('parent-sig-text')?.value.trim() || parentName;
-    if (pTxt) parentSigData = generateTypedSignatureImage(pTxt, 'cursive-2');
+    if (pTxt) {
+      const pGen = generateTypedSignatureImage(pTxt, 'cursive-2');
+      if (pGen) {
+        parentSigData = pGen.dataUrl;
+        parentSigW = pGen.width;
+        parentSigH = pGen.height;
+      }
+    }
   }
 
   if (parentSigData) {
@@ -456,18 +553,30 @@ async function buildFilledPdfDocument() {
       } else {
         parentImg = await pdfDoc.embedPng(parentSigData);
       }
+
+      const maxW = 115;
+      const maxH = 24; // Strict cap so top never exceeds y=392 (Parent Name is at 402.5)
+      const ratio = parentSigW / (parentSigH || 1);
+      
+      let drawW = maxW;
+      let drawH = drawW / ratio;
+      if (drawH > maxH) {
+        drawH = maxH;
+        drawW = drawH * ratio;
+      }
+
       page2.drawImage(parentImg, {
-        x: 175,
-        y: 370,
-        width: 125,
-        height: 35
+        x: 180,
+        y: 367,
+        width: Math.min(drawW, maxW),
+        height: Math.min(drawH, maxH)
       });
     } catch (e) {
       console.warn('Could not embed parent signature:', e);
     }
   }
 
-  // 6. Parent Date (rests cleanly on Date line at y: 332.5)
+  // 6. Parent Date
   if (parentDate) {
     page2.drawText(parentDate, { x: 102, y: 332.5, size: 10.5, font, color });
   }
@@ -599,6 +708,10 @@ function toggleMobilePreview() {
   const btnLabel = document.getElementById('mobile-btn-label');
   if (previewPane) {
     const isActive = previewPane.classList.toggle('mobile-active');
+    if (isActive) {
+      previewEverOpened = true;
+      renderPdfDocument();
+    }
     if (btnLabel) {
       btnLabel.textContent = isActive ? 'Back to Form' : 'Preview PDF';
     }
