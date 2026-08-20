@@ -330,8 +330,8 @@ function attachInputListeners() {
 
     el.addEventListener('input', () => {
       if (id === 'inp-club-name') document.getElementById('disp-club-name').textContent = el.value || 'Rotaract Club of VIT Chennai';
-      if (id === 'inp-activity-name') document.getElementById('disp-activity-name').textContent = el.value || 'Kadal Karai Symphony - Episode 1, Beach Cleanup';
-      if (id === 'inp-date-venue') document.getElementById('disp-date-venue').textContent = el.value || '23rd August 2026, Ashtalakshmi Temple Beach, Besant Nagar';
+      if (id === 'inp-activity-name') document.getElementById('disp-activity-name').textContent = el.value || 'Kadal Karai Symphony - (Episode 1), Beach Cleanup';
+      if (id === 'inp-date-venue') document.getElementById('disp-date-venue').textContent = el.value || '23rd August 2026, Besant Nagar, Chennai';
       if (id === 'inp-faculty-coord') document.getElementById('disp-faculty-coord').textContent = el.value || 'Dr. V. VIJAYALAKSHMI';
 
       saveDraft();
@@ -399,8 +399,8 @@ async function buildFilledPdfDocument() {
 
   // Form Field Values
   const clubName = document.getElementById('inp-club-name')?.value.trim() || 'Rotaract Club of VIT Chennai';
-  const activityName = document.getElementById('inp-activity-name')?.value.trim() || 'Kadal Karai Symphony - Episode 1, Beach Cleanup';
-  const dateVenue = document.getElementById('inp-date-venue')?.value.trim() || '23rd August 2026, Ashtalakshmi Temple Beach, Besant Nagar';
+  const activityName = document.getElementById('inp-activity-name')?.value.trim() || 'Kadal Karai Symphony - (Episode 1), Beach Cleanup';
+  const dateVenue = document.getElementById('inp-date-venue')?.value.trim() || '23rd August 2026, Besant Nagar, Chennai';
   const facultyCoord = document.getElementById('inp-faculty-coord')?.value.trim() || 'Dr. V. VIJAYALAKSHMI';
 
   const studentName = document.getElementById('student-name')?.value.trim() || '';
